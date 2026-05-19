@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **learning-focused** NestJS boilerplate demonstrating CQRS + light DDD (Domain-Driven Design). It is built step by step so each concept is introduced incrementally. The domain example is **Users**.
 
+## Teaching Style
+
+This project is a learning exercise. When building each step:
+
+- **Explain before you write.** Before creating a file, say in plain language what it does and why it exists — not what the code does line by line, but what role it plays in the architecture.
+- **Be honest about trade-offs.** If there are multiple valid approaches, say so and explain why you chose one over the other.
+- **Flag non-obvious decisions.** If something looks weird or goes against common instinct (e.g. "why doesn't the Aggregate save itself?"), explain the reasoning unprompted.
+- **Connect new pieces to what's already built.** When adding something new, say how it fits with what came before.
+- **Don't assume prior knowledge.** Write as if the reader understands TypeScript but is new to CQRS, DDD, and NestJS patterns.
+
 ## Commands
 
 ```bash
