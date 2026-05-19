@@ -1,6 +1,8 @@
 import { AggregateRoot } from '@nestjs/cqrs';
 import * as bcrypt from 'bcrypt';
 
+import { UserRegisteredEvent } from '../events/user-registered.event';
+
 interface UserProps {
   id: string;
   email: string;
@@ -30,13 +32,13 @@ export class UserAggregate extends AggregateRoot {
     this.refreshTokenHash = props.refreshTokenHash;
   }
 
-  // Called when a new user registers - runs business rules, generates identity
+  // Called when a new user registers - runs business rules, generates identity, queues domain event
   static async register(
     email: string,
     password: string,
   ): Promise<UserAggregate> {
     const passwordHash = await bcrypt.hash(password, 10);
-    return new UserAggregate({
+    const user = new UserAggregate({
       id: crypto.randomUUID(),
       email,
       passwordHash,
@@ -44,6 +46,8 @@ export class UserAggregate extends AggregateRoot {
       googleId: null,
       refreshTokenHash: null,
     });
+    user.apply(new UserRegisteredEvent(user.id, user.email));
+    return user;
   }
 
   // Called when loading an existing user from the DB - no rules, just restore state
