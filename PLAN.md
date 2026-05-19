@@ -26,8 +26,8 @@
 | 2   | Config module (`@nestjs/config` + class-validator env validation)   | done    | `chore: initial project setup` |
 | 3   | Logger module (Pino + nestjs-pino)                                  | done    | `chore: initial project setup` |
 | 4   | Husky + lint-staged + conventional commits                          | done    | `chore: fix commit-msg hook`   |
-| 5   | Prisma setup (schema, PrismaService, PrismaModule, migrations)      | pending | -                              |
-| 6   | Health check module (`@nestjs/terminus`)                            | pending | -                              |
+| 5   | Prisma setup (schema, PrismaService, PrismaModule, migrations)      | done    | `feat: add Prisma setup`       |
+| 6   | Health check module (`@nestjs/terminus`)                            | done    | `feat: add health check`       |
 | 7   | i18n module (`nestjs-i18n`)                                         | pending | -                              |
 | 8   | Email module (Nodemailer + Handlebars)                              | pending | -                              |
 | 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | pending | -                              |
