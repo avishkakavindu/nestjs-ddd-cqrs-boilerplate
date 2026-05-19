@@ -20,19 +20,19 @@
 
 ### Infrastructure
 
-| #   | Step                                                                | Status  | Commit                         |
-| --- | ------------------------------------------------------------------- | ------- | ------------------------------ |
-| 1   | Scaffold NestJS project (`nest new`)                                | done    | `chore: initial project setup` |
-| 2   | Config module (`@nestjs/config` + class-validator env validation)   | done    | `chore: initial project setup` |
-| 3   | Logger module (Pino + nestjs-pino)                                  | done    | `chore: initial project setup` |
-| 4   | Husky + lint-staged + conventional commits                          | done    | `chore: fix commit-msg hook`   |
-| 5   | Prisma setup (schema, PrismaService, PrismaModule, migrations)      | done    | `feat: add Prisma setup`       |
-| 6   | Health check module (`@nestjs/terminus`)                            | done    | `feat: add health check`       |
-| 7   | i18n module (`nestjs-i18n`)                                         | done    | `feat: add i18n module`        |
-| 8   | Email module (Nodemailer + Handlebars)                              | pending | -                              |
-| 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | done    | `feat: add common layer`       |
-| 10  | Security (Helmet, CORS, Throttler) + Swagger + main.ts bootstrap    | pending | -                              |
-| 11  | Docker + docker-compose (app + PostgreSQL)                          | pending | -                              |
+| #   | Step                                                                | Status  | Commit                           |
+| --- | ------------------------------------------------------------------- | ------- | -------------------------------- |
+| 1   | Scaffold NestJS project (`nest new`)                                | done    | `chore: initial project setup`   |
+| 2   | Config module (`@nestjs/config` + class-validator env validation)   | done    | `chore: initial project setup`   |
+| 3   | Logger module (Pino + nestjs-pino)                                  | done    | `chore: initial project setup`   |
+| 4   | Husky + lint-staged + conventional commits                          | done    | `chore: fix commit-msg hook`     |
+| 5   | Prisma setup (schema, PrismaService, PrismaModule, migrations)      | done    | `feat: add Prisma setup`         |
+| 6   | Health check module (`@nestjs/terminus`)                            | done    | `feat: add health check`         |
+| 7   | i18n module (`nestjs-i18n`)                                         | done    | `feat: add i18n module`          |
+| 8   | Email module (Nodemailer + Handlebars)                              | pending | -                                |
+| 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | done    | `feat: add common layer`         |
+| 10  | Security (Helmet, CORS, Throttler) + Swagger + main.ts bootstrap    | done    | `feat: add security and swagger` |
+| 11  | Docker + docker-compose (app + PostgreSQL)                          | pending | -                                |
 
 ### CQRS + DDD (Users domain)
 
