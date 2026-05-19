@@ -30,7 +30,7 @@
 | 6   | Health check module (`@nestjs/terminus`)                            | done    | `feat: add health check`       |
 | 7   | i18n module (`nestjs-i18n`)                                         | done    | `feat: add i18n module`        |
 | 8   | Email module (Nodemailer + Handlebars)                              | pending | -                              |
-| 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | pending | -                              |
+| 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | done    | `feat: add common layer`       |
 | 10  | Security (Helmet, CORS, Throttler) + Swagger + main.ts bootstrap    | pending | -                              |
 | 11  | Docker + docker-compose (app + PostgreSQL)                          | pending | -                              |
 
