@@ -11,10 +11,18 @@ import { IUserRepository } from '../domain/user.repository';
 export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByEmail(email: string): Promise<UserAggregate | null> {
-    const row = await this.prisma.user.findUnique({ where: { email } });
-    if (!row) return null;
-
+  private toAggregate(row: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    passwordHash: string | null;
+    isEmailVerified: boolean;
+    emailVerificationToken: string | null;
+    emailVerificationTokenExpiry: Date | null;
+    googleId: string | null;
+    refreshTokenHash: string | null;
+  }): UserAggregate {
     return UserAggregate.reconstitute({
       id: row.id,
       email: row.email,
@@ -22,9 +30,28 @@ export class PrismaUserRepository implements IUserRepository {
       lastName: row.lastName,
       passwordHash: row.passwordHash,
       isEmailVerified: row.isEmailVerified,
+      emailVerificationToken: row.emailVerificationToken,
+      emailVerificationTokenExpiry: row.emailVerificationTokenExpiry,
       googleId: row.googleId,
       refreshTokenHash: row.refreshTokenHash,
     });
+  }
+
+  async findById(id: string): Promise<UserAggregate | null> {
+    const row = await this.prisma.user.findUnique({ where: { id } });
+    return row ? this.toAggregate(row) : null;
+  }
+
+  async findByEmail(email: string): Promise<UserAggregate | null> {
+    const row = await this.prisma.user.findUnique({ where: { email } });
+    return row ? this.toAggregate(row) : null;
+  }
+
+  async findByVerificationToken(token: string): Promise<UserAggregate | null> {
+    const row = await this.prisma.user.findUnique({
+      where: { emailVerificationToken: token },
+    });
+    return row ? this.toAggregate(row) : null;
   }
 
   async save(user: UserAggregate): Promise<void> {
@@ -37,6 +64,8 @@ export class PrismaUserRepository implements IUserRepository {
         lastName: user.lastName,
         passwordHash: user.passwordHash,
         isEmailVerified: user.isEmailVerified,
+        emailVerificationToken: user.emailVerificationToken,
+        emailVerificationTokenExpiry: user.emailVerificationTokenExpiry,
         googleId: user.googleId,
         refreshTokenHash: user.refreshTokenHash,
       },
@@ -46,6 +75,8 @@ export class PrismaUserRepository implements IUserRepository {
         lastName: user.lastName,
         passwordHash: user.passwordHash,
         isEmailVerified: user.isEmailVerified,
+        emailVerificationToken: user.emailVerificationToken,
+        emailVerificationTokenExpiry: user.emailVerificationTokenExpiry,
         googleId: user.googleId,
         refreshTokenHash: user.refreshTokenHash,
       },

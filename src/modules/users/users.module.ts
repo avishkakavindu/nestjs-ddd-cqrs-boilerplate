@@ -1,14 +1,26 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 
+import { ChangePasswordHandler } from './commands/handlers/change-password.handler';
 import { RegisterUserHandler } from './commands/handlers/register-user.handler';
+import { VerifyEmailHandler } from './commands/handlers/verify-email.handler';
 import { USER_REPOSITORY } from './domain/user.repository';
+import { UserEmailVerifiedHandler } from './events/handlers/user-email-verified.handler';
+import { UserPasswordChangedHandler } from './events/handlers/user-password-changed.handler';
 import { UserRegisteredHandler } from './events/handlers/user-registered.handler';
 import { PrismaUserRepository } from './infrastructure/prisma-user.repository';
 import { UsersController } from './users.controller';
 
-const CommandHandlers = [RegisterUserHandler];
-const EventHandlers = [UserRegisteredHandler];
+const CommandHandlers = [
+  RegisterUserHandler,
+  VerifyEmailHandler,
+  ChangePasswordHandler,
+];
+const EventHandlers = [
+  UserRegisteredHandler,
+  UserEmailVerifiedHandler,
+  UserPasswordChangedHandler,
+];
 
 @Module({
   imports: [CqrsModule],
@@ -16,8 +28,6 @@ const EventHandlers = [UserRegisteredHandler];
   providers: [
     ...CommandHandlers,
     ...EventHandlers,
-    // Bind the domain interface token to the Prisma implementation.
-    // Swap useClass here to change the DB without touching handlers.
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
   ],
 })

@@ -1,6 +1,9 @@
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AggregateRoot } from '@nestjs/cqrs';
 import * as bcrypt from 'bcrypt';
 
+import { UserEmailVerifiedEvent } from '../events/user-email-verified.event';
+import { UserPasswordChangedEvent } from '../events/user-password-changed.event';
 import { UserRegisteredEvent } from '../events/user-registered.event';
 
 interface UserProps {
@@ -10,6 +13,8 @@ interface UserProps {
   lastName: string;
   passwordHash: string | null;
   isEmailVerified: boolean;
+  emailVerificationToken: string | null;
+  emailVerificationTokenExpiry: Date | null;
   googleId: string | null;
   refreshTokenHash: string | null;
 }
@@ -23,6 +28,8 @@ export class UserAggregate extends AggregateRoot {
   readonly lastName: string;
   readonly passwordHash: string | null;
   readonly isEmailVerified: boolean;
+  readonly emailVerificationToken: string | null;
+  readonly emailVerificationTokenExpiry: Date | null;
   readonly googleId: string | null;
   readonly refreshTokenHash: string | null;
 
@@ -34,6 +41,8 @@ export class UserAggregate extends AggregateRoot {
     this.lastName = props.lastName;
     this.passwordHash = props.passwordHash;
     this.isEmailVerified = props.isEmailVerified;
+    this.emailVerificationToken = props.emailVerificationToken;
+    this.emailVerificationTokenExpiry = props.emailVerificationTokenExpiry;
     this.googleId = props.googleId;
     this.refreshTokenHash = props.refreshTokenHash;
   }
@@ -46,6 +55,11 @@ export class UserAggregate extends AggregateRoot {
     password: string,
   ): Promise<UserAggregate> {
     const passwordHash = await bcrypt.hash(password, 10);
+    const emailVerificationToken = crypto.randomUUID();
+    const emailVerificationTokenExpiry = new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    ); // 24h
+
     const user = new UserAggregate({
       id: crypto.randomUUID(),
       email,
@@ -53,15 +67,73 @@ export class UserAggregate extends AggregateRoot {
       lastName,
       passwordHash,
       isEmailVerified: false,
+      emailVerificationToken,
+      emailVerificationTokenExpiry,
       googleId: null,
       refreshTokenHash: null,
     });
-    user.apply(new UserRegisteredEvent(user.id, user.email));
+    user.apply(
+      new UserRegisteredEvent(user.id, user.email, emailVerificationToken),
+    );
     return user;
   }
 
   // Called when loading an existing user from the DB - no rules, just restore state
   static reconstitute(props: UserProps): UserAggregate {
     return new UserAggregate(props);
+  }
+
+  verifyEmail(token: string): void {
+    if (this.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+    if (this.emailVerificationToken !== token) {
+      throw new UnauthorizedException('Invalid verification token');
+    }
+    if (
+      !this.emailVerificationTokenExpiry ||
+      this.emailVerificationTokenExpiry < new Date()
+    ) {
+      throw new UnauthorizedException('Verification token has expired');
+    }
+    // Aggregate is immutable — state changes produce a new instance via reconstitute in the handler
+    this.apply(new UserEmailVerifiedEvent(this.id, this.email));
+  }
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<UserAggregate> {
+    if (!this.passwordHash) {
+      throw new BadRequestException(
+        'Account uses social login — no password to change',
+      );
+    }
+    const matches = await bcrypt.compare(currentPassword, this.passwordHash);
+    if (!matches) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    const newHash = await bcrypt.hash(newPassword, 10);
+    const updated = UserAggregate.reconstitute({
+      ...this.toProps(),
+      passwordHash: newHash,
+    });
+    updated.apply(new UserPasswordChangedEvent(this.id));
+    return updated;
+  }
+
+  private toProps(): UserProps {
+    return {
+      id: this.id,
+      email: this.email,
+      firstName: this.firstName,
+      lastName: this.lastName,
+      passwordHash: this.passwordHash,
+      isEmailVerified: this.isEmailVerified,
+      emailVerificationToken: this.emailVerificationToken,
+      emailVerificationTokenExpiry: this.emailVerificationTokenExpiry,
+      googleId: this.googleId,
+      refreshTokenHash: this.refreshTokenHash,
+    };
   }
 }

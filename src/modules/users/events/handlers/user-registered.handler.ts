@@ -13,7 +13,7 @@ export class UserRegisteredHandler implements IEventHandler<UserRegisteredEvent>
   handle(event: UserRegisteredEvent): void {
     // TODO: inject EmailService and send verification email once email module (step 8) is built
     this.logger.log(
-      `User registered: ${event.email} (id: ${event.userId}) - verification email pending`,
+      `User registered: ${event.email} (id: ${event.userId}) - verification token: ${event.emailVerificationToken}`,
     );
   }
 }
