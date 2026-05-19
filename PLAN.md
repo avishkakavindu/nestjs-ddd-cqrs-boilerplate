@@ -36,15 +36,15 @@
 
 ### CQRS + DDD (Users domain)
 
-| #   | Step                                                                      | Status  | Commit                                  |
-| --- | ------------------------------------------------------------------------- | ------- | --------------------------------------- |
-| 12  | Install `@nestjs/cqrs` — what CQRS is                                     | done    | `feat: add UsersModule with CqrsModule` |
-| 13  | First Command + Handler (RegisterUser, no Aggregate yet)                  | pending | -                                       |
-| 14  | User Aggregate (pure class, domain logic, `apply()` events)               | pending | -                                       |
-| 15  | Repository pattern (`IUserRepository` interface + `PrismaUserRepository`) | pending | -                                       |
-| 16  | Domain Events (`UserRegisteredEvent` -> send verification email)          | pending | -                                       |
-| 17  | Remaining User Commands (`VerifyEmailCommand`, `ChangePasswordCommand`)   | pending | -                                       |
-| 18  | Query side (`GetUserQuery`, `ListUsersQuery`)                             | pending | -                                       |
+| #   | Step                                                                      | Status  | Commit                                       |
+| --- | ------------------------------------------------------------------------- | ------- | -------------------------------------------- |
+| 12  | Install `@nestjs/cqrs` — what CQRS is                                     | done    | `feat: add UsersModule with CqrsModule`      |
+| 13  | First Command + Handler (RegisterUser, no Aggregate yet)                  | done    | `feat: add RegisterUser command and handler` |
+| 14  | User Aggregate (pure class, domain logic, `apply()` events)               | pending | -                                            |
+| 15  | Repository pattern (`IUserRepository` interface + `PrismaUserRepository`) | pending | -                                            |
+| 16  | Domain Events (`UserRegisteredEvent` -> send verification email)          | pending | -                                            |
+| 17  | Remaining User Commands (`VerifyEmailCommand`, `ChangePasswordCommand`)   | pending | -                                            |
+| 18  | Query side (`GetUserQuery`, `ListUsersQuery`)                             | pending | -                                            |
 
 ### Auth (CQRS-style)
 
