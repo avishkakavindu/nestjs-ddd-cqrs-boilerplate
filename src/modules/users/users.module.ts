@@ -9,6 +9,8 @@ import { UserEmailVerifiedHandler } from './events/handlers/user-email-verified.
 import { UserPasswordChangedHandler } from './events/handlers/user-password-changed.handler';
 import { UserRegisteredHandler } from './events/handlers/user-registered.handler';
 import { PrismaUserRepository } from './infrastructure/prisma-user.repository';
+import { GetUserHandler } from './queries/handlers/get-user.handler';
+import { ListUsersHandler } from './queries/handlers/list-users.handler';
 import { UsersController } from './users.controller';
 
 const CommandHandlers = [
@@ -16,6 +18,7 @@ const CommandHandlers = [
   VerifyEmailHandler,
   ChangePasswordHandler,
 ];
+const QueryHandlers = [GetUserHandler, ListUsersHandler];
 const EventHandlers = [
   UserRegisteredHandler,
   UserEmailVerifiedHandler,
@@ -27,6 +30,7 @@ const EventHandlers = [
   controllers: [UsersController],
   providers: [
     ...CommandHandlers,
+    ...QueryHandlers,
     ...EventHandlers,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
   ],
