@@ -139,6 +139,8 @@ nestjs-cqrs-boilerplate/
 |
 |- src/
 |   |
+|   |   // --- Infrastructure (cross-cutting, no business logic) ---
+|   |
 |   |- config/                <- Environment variable loading & validation
 |   |   |- config.module.ts
 |   |   |- app-config.service.ts
@@ -151,53 +153,77 @@ nestjs-cqrs-boilerplate/
 |   |   |- prisma.module.ts
 |   |   |- prisma.service.ts
 |   |
-|   |- users/                 <- Users domain (added in later steps)
-|   |   |- commands/
-|   |   |   |- register-user.command.ts
-|   |   |   |- handlers/
-|   |   |       |- register-user.handler.ts
-|   |   |
-|   |   |- queries/
-|   |   |   |- get-user.query.ts
-|   |   |   |- handlers/
-|   |   |       |- get-user.handler.ts
-|   |   |
-|   |   |- events/
-|   |   |   |- user-registered.event.ts
-|   |   |   |- handlers/
-|   |   |       |- user-registered.handler.ts
-|   |   |
-|   |   |- domain/
-|   |   |   |- user.aggregate.ts
-|   |   |
-|   |   |- users.controller.ts
-|   |   |- users.module.ts
+|   |- health/                <- Health check endpoint (/health)
+|   |   |- health.controller.ts
+|   |   |- health.module.ts
 |   |
-|   |- posts/                 <- Posts domain (same pattern, different domain)
-|   |   |- commands/
-|   |   |   |- create-post.command.ts
-|   |   |   |- publish-post.command.ts
-|   |   |   |- handlers/
-|   |   |       |- create-post.handler.ts
-|   |   |       |- publish-post.handler.ts
+|   |- i18n/                  <- Translations
+|   |   |- en/
+|   |   |   |- common.json
+|   |   |   |- auth.json
+|   |   |   |- users.json
+|   |   |- i18n.module.ts
+|   |
+|   |- common/                <- Shared utilities used across all modules
+|   |   |- filters/
+|   |   |   |- all-exceptions.filter.ts
+|   |   |- decorators/
+|   |   |   |- current-user.decorator.ts
+|   |   |- dto/
+|   |   |   |- pagination.dto.ts
+|   |   |- common.module.ts
+|   |
+|   |   // --- Domain modules (business logic lives here) ---
+|   |
+|   |- modules/
 |   |   |
-|   |   |- queries/
-|   |   |   |- get-post.query.ts
-|   |   |   |- list-posts.query.ts
-|   |   |   |- handlers/
-|   |   |       |- get-post.handler.ts
-|   |   |       |- list-posts.handler.ts
+|   |   |- users/             <- Users domain
+|   |   |   |- commands/
+|   |   |   |   |- register-user.command.ts
+|   |   |   |   |- handlers/
+|   |   |   |       |- register-user.handler.ts
+|   |   |   |
+|   |   |   |- queries/
+|   |   |   |   |- get-user.query.ts
+|   |   |   |   |- handlers/
+|   |   |   |       |- get-user.handler.ts
+|   |   |   |
+|   |   |   |- events/
+|   |   |   |   |- user-registered.event.ts
+|   |   |   |   |- handlers/
+|   |   |   |       |- user-registered.handler.ts
+|   |   |   |
+|   |   |   |- domain/
+|   |   |   |   |- user.aggregate.ts
+|   |   |   |
+|   |   |   |- users.controller.ts
+|   |   |   |- users.module.ts
 |   |   |
-|   |   |- events/
-|   |   |   |- post-published.event.ts
-|   |   |   |- handlers/
-|   |   |       |- post-published.handler.ts
-|   |   |
-|   |   |- domain/
-|   |   |   |- post.aggregate.ts
-|   |   |
-|   |   |- posts.controller.ts
-|   |   |- posts.module.ts
+|   |   |- posts/             <- Posts domain (same pattern, different domain)
+|   |   |   |- commands/
+|   |   |   |   |- create-post.command.ts
+|   |   |   |   |- publish-post.command.ts
+|   |   |   |   |- handlers/
+|   |   |   |       |- create-post.handler.ts
+|   |   |   |       |- publish-post.handler.ts
+|   |   |   |
+|   |   |   |- queries/
+|   |   |   |   |- get-post.query.ts
+|   |   |   |   |- list-posts.query.ts
+|   |   |   |   |- handlers/
+|   |   |   |       |- get-post.handler.ts
+|   |   |   |       |- list-posts.handler.ts
+|   |   |   |
+|   |   |   |- events/
+|   |   |   |   |- post-published.event.ts
+|   |   |   |   |- handlers/
+|   |   |   |       |- post-published.handler.ts
+|   |   |   |
+|   |   |   |- domain/
+|   |   |   |   |- post.aggregate.ts
+|   |   |   |
+|   |   |   |- posts.controller.ts
+|   |   |   |- posts.module.ts
 |   |
 |   |- app.module.ts          <- Root module, imports all feature modules
 |   |- main.ts                <- Entry point, bootstrap
@@ -303,7 +329,7 @@ export class PrismaService
 
 - **`prisma.module.ts`** — marked `@Global()`, so any module in the app can inject `PrismaService` without re-importing `PrismaModule`.
 
-### `src/users/` (added in later steps)
+### `src/modules/users/` (added in later steps)
 
 This is where the CQRS + DDD pattern comes to life. Here is what each sub-folder holds:
 
@@ -421,7 +447,7 @@ Key rule: **the Aggregate never imports Prisma**. It only knows about the domain
 
 ---
 
-### `src/posts/` (second domain — same pattern, different context)
+### `src/modules/posts/` (second domain — same pattern, different context)
 
 Posts follow the exact same structure as Users. This is the point: once you learn the pattern for one domain, adding a new one is mechanical.
 
