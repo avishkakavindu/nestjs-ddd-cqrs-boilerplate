@@ -36,15 +36,15 @@
 
 ### CQRS + DDD (Users domain)
 
-| #   | Step                                                                      | Status  | Commit                                       |
-| --- | ------------------------------------------------------------------------- | ------- | -------------------------------------------- |
-| 12  | Install `@nestjs/cqrs` — what CQRS is                                     | done    | `feat: add UsersModule with CqrsModule`      |
-| 13  | First Command + Handler (RegisterUser, no Aggregate yet)                  | done    | `feat: add RegisterUser command and handler` |
-| 14  | User Aggregate (pure class, domain logic, `apply()` events)               | pending | -                                            |
-| 15  | Repository pattern (`IUserRepository` interface + `PrismaUserRepository`) | pending | -                                            |
-| 16  | Domain Events (`UserRegisteredEvent` -> send verification email)          | pending | -                                            |
-| 17  | Remaining User Commands (`VerifyEmailCommand`, `ChangePasswordCommand`)   | pending | -                                            |
-| 18  | Query side (`GetUserQuery`, `ListUsersQuery`)                             | pending | -                                            |
+| #   | Step                                                                      | Status | Commit                                                                             |
+| --- | ------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------- |
+| 12  | Install `@nestjs/cqrs` — what CQRS is                                     | done   | `feat: add UsersModule with CqrsModule`                                            |
+| 13  | First Command + Handler (RegisterUser, no Aggregate yet)                  | done   | `feat: add RegisterUser command and handler`                                       |
+| 14  | User Aggregate (pure class, domain logic, `apply()` events)               | done   | `feat: add UserAggregate and move domain logic out of handler`                     |
+| 15  | Repository pattern (`IUserRepository` interface + `PrismaUserRepository`) | done   | `feat: add IUserRepository interface and PrismaUserRepository`                     |
+| 16  | Domain Events (`UserRegisteredEvent` -> send verification email)          | done   | `feat: add UserRegisteredEvent, raise from Aggregate, dispatch via EventPublisher` |
+| 17  | Remaining User Commands (`VerifyEmailCommand`, `ChangePasswordCommand`)   | done   | `feat: add VerifyEmailCommand and ChangePasswordCommand`                           |
+| 18  | Query side (`GetUserQuery`, `ListUsersQuery`)                             | done   | `feat: add GetUserQuery and ListUsersQuery with paginated response`                |
 
 ### Auth (CQRS-style)
 
@@ -83,15 +83,15 @@ Read side:
     -> Controller
     -> QueryBus.execute(query)
     -> QueryHandler
-    -> IUserRepository.findMany()  <- direct DB read, no Aggregate
+    -> PrismaService (direct DB read, no Aggregate, no repository)
     -> returns DTO
 ```
 
 ## Domain Events
 
-| Event                      | Triggered by           | Handler side effect       |
-| -------------------------- | ---------------------- | ------------------------- |
-| `UserRegisteredEvent`      | RegisterUser command   | Send verification email   |
-| `UserEmailVerifiedEvent`   | VerifyEmail command    | Send welcome email        |
-| `UserLoggedInEvent`        | Login command          | Write audit log           |
-| `UserPasswordChangedEvent` | ChangePassword command | Send security alert email |
+| Event                      | Triggered by           | Handler side effect                       |
+| -------------------------- | ---------------------- | ----------------------------------------- |
+| `UserRegisteredEvent`      | RegisterUser command   | Log token (TODO: send verification email) |
+| `UserEmailVerifiedEvent`   | VerifyEmail command    | Log (TODO: send welcome email)            |
+| `UserLoggedInEvent`        | Login command          | Write audit log                           |
+| `UserPasswordChangedEvent` | ChangePassword command | Log (TODO: send security alert email)     |
