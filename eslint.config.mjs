@@ -40,4 +40,13 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'off',
     },
   },
+  {
+    files: ['src/i18n/i18n.module.ts'],
+    rules: {
+      // nestjs-i18n module types are not resolvable by typescript-eslint, producing false positives.
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
 );

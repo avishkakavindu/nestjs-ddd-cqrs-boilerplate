@@ -1,0 +1,14 @@
+{
+  "validation": {
+    "required": "{field} is required",
+    "invalid": "{field} is invalid",
+    "min_length": "{field} must be at least {min} characters",
+    "max_length": "{field} must be at most {max} characters"
+  },
+  "errors": {
+    "internal": "Something went wrong. Please try again later.",
+    "not_found": "{resource} not found",
+    "forbidden": "You do not have permission to perform this action",
+    "unauthorized": "Authentication is required"
+  }
+}

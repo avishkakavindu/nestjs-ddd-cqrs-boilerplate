@@ -1,0 +1,5 @@
+{
+  "created": "User registered successfully",
+  "not_found": "User not found",
+  "email_taken": "An account with this email already exists"
+}
