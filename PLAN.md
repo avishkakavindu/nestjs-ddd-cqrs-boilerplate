@@ -32,7 +32,7 @@
 | 8   | Email module (Nodemailer + Handlebars)                              | pending | -                                |
 | 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | done    | `feat: add common layer`         |
 | 10  | Security (Helmet, CORS, Throttler) + Swagger + main.ts bootstrap    | done    | `feat: add security and swagger` |
-| 11  | Docker + docker-compose (app + PostgreSQL)                          | pending | -                                |
+| 11  | Docker + docker-compose (app + PostgreSQL)                          | done    | `feat: add Docker setup`         |
 
 ### CQRS + DDD (Users domain)
 
