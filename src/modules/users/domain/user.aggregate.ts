@@ -6,6 +6,8 @@ import { UserRegisteredEvent } from '../events/user-registered.event';
 interface UserProps {
   id: string;
   email: string;
+  firstName: string;
+  lastName: string;
   passwordHash: string | null;
   isEmailVerified: boolean;
   googleId: string | null;
@@ -17,6 +19,8 @@ interface UserProps {
 export class UserAggregate extends AggregateRoot {
   readonly id: string;
   readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
   readonly passwordHash: string | null;
   readonly isEmailVerified: boolean;
   readonly googleId: string | null;
@@ -26,6 +30,8 @@ export class UserAggregate extends AggregateRoot {
     super();
     this.id = props.id;
     this.email = props.email;
+    this.firstName = props.firstName;
+    this.lastName = props.lastName;
     this.passwordHash = props.passwordHash;
     this.isEmailVerified = props.isEmailVerified;
     this.googleId = props.googleId;
@@ -35,12 +41,16 @@ export class UserAggregate extends AggregateRoot {
   // Called when a new user registers - runs business rules, generates identity, queues domain event
   static async register(
     email: string,
+    firstName: string,
+    lastName: string,
     password: string,
   ): Promise<UserAggregate> {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = new UserAggregate({
       id: crypto.randomUUID(),
       email,
+      firstName,
+      lastName,
       passwordHash,
       isEmailVerified: false,
       googleId: null,

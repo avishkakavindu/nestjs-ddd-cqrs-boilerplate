@@ -25,7 +25,12 @@ export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand>
     // mergeObjectContext wires the EventBus into the aggregate instance
     // so that commit() actually dispatches queued events
     const user = this.publisher.mergeObjectContext(
-      await UserAggregate.register(command.email, command.password),
+      await UserAggregate.register(
+        command.email,
+        command.firstName,
+        command.lastName,
+        command.password,
+      ),
     );
 
     await this.userRepo.save(user);

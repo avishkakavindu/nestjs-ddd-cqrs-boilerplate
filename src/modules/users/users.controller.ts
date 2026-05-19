@@ -11,11 +11,16 @@ export class UsersController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Post('register')
+  @Post('')
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterUserDto) {
     return this.commandBus.execute(
-      new RegisterUserCommand(dto.email, dto.password),
+      new RegisterUserCommand(
+        dto.email,
+        dto.firstName,
+        dto.lastName,
+        dto.password,
+      ),
     );
   }
 }

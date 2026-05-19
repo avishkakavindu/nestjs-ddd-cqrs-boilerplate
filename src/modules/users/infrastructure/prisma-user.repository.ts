@@ -18,6 +18,8 @@ export class PrismaUserRepository implements IUserRepository {
     return UserAggregate.reconstitute({
       id: row.id,
       email: row.email,
+      firstName: row.firstName,
+      lastName: row.lastName,
       passwordHash: row.passwordHash,
       isEmailVerified: row.isEmailVerified,
       googleId: row.googleId,
@@ -31,6 +33,8 @@ export class PrismaUserRepository implements IUserRepository {
       create: {
         id: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         passwordHash: user.passwordHash,
         isEmailVerified: user.isEmailVerified,
         googleId: user.googleId,
@@ -38,6 +42,8 @@ export class PrismaUserRepository implements IUserRepository {
       },
       update: {
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         passwordHash: user.passwordHash,
         isEmailVerified: user.isEmailVerified,
         googleId: user.googleId,
