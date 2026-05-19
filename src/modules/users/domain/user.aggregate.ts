@@ -1,0 +1,53 @@
+import { AggregateRoot } from '@nestjs/cqrs';
+import * as bcrypt from 'bcrypt';
+
+interface UserProps {
+  id: string;
+  email: string;
+  passwordHash: string | null;
+  isEmailVerified: boolean;
+  googleId: string | null;
+  refreshTokenHash: string | null;
+}
+
+// Aggregate root: owns all business rules for the User domain. No Prisma, no HTTP - pure TypeScript.
+// The handler orchestrates (load, call, save). The Aggregate decides (what's valid, what state changes).
+export class UserAggregate extends AggregateRoot {
+  readonly id: string;
+  readonly email: string;
+  readonly passwordHash: string | null;
+  readonly isEmailVerified: boolean;
+  readonly googleId: string | null;
+  readonly refreshTokenHash: string | null;
+
+  private constructor(props: UserProps) {
+    super();
+    this.id = props.id;
+    this.email = props.email;
+    this.passwordHash = props.passwordHash;
+    this.isEmailVerified = props.isEmailVerified;
+    this.googleId = props.googleId;
+    this.refreshTokenHash = props.refreshTokenHash;
+  }
+
+  // Called when a new user registers - runs business rules, generates identity
+  static async register(
+    email: string,
+    password: string,
+  ): Promise<UserAggregate> {
+    const passwordHash = await bcrypt.hash(password, 10);
+    return new UserAggregate({
+      id: crypto.randomUUID(),
+      email,
+      passwordHash,
+      isEmailVerified: false,
+      googleId: null,
+      refreshTokenHash: null,
+    });
+  }
+
+  // Called when loading an existing user from the DB - no rules, just restore state
+  static reconstitute(props: UserProps): UserAggregate {
+    return new UserAggregate(props);
+  }
+}
