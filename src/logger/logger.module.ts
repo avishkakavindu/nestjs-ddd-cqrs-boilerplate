@@ -30,6 +30,23 @@ import { AppConfigService } from '../config/app-config.service';
 
           // Log level based on environment
           level: config.isProduction ? 'info' : 'debug',
+
+          // Redact sensitive headers from logs
+          redact: ['req.headers.authorization', 'req.headers.cookie'],
+
+          // In development: log only what's useful — method, url, status, response time
+          // In production: keep full request detail for debugging
+          serializers: config.isProduction
+            ? undefined
+            : {
+                req: (req: { method: string; url: string }) => ({
+                  method: req.method,
+                  url: req.url,
+                }),
+                res: (res: { statusCode: number }) => ({
+                  statusCode: res.statusCode,
+                }),
+              },
         },
       }),
     }),

@@ -17,7 +17,7 @@ async function bootstrap() {
   app.use(helmet());
   app.enableCors({ origin: config.corsOrigin });
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api/v1');
 
   app.useGlobalPipes(
     new ValidationPipe({

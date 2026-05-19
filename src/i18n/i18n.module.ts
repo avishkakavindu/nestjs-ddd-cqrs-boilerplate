@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { HeaderResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
+import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
 import * as path from 'path';
 
 @Module({
@@ -12,7 +12,7 @@ import * as path from 'path';
       },
       resolvers: [
         { use: QueryResolver, options: ['lang'] },
-        new HeaderResolver(['accept-language']),
+        AcceptLanguageResolver,
       ],
     }),
   ],
