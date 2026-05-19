@@ -1,8 +1,9 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
-import { PrismaService } from '../../../../prisma/prisma.service';
 import { UserAggregate } from '../../domain/user.aggregate';
+import { USER_REPOSITORY } from '../../domain/user.repository';
+import type { IUserRepository } from '../../domain/user.repository';
 import { RegisterUserCommand } from '../register-user.command';
 
 // Command handler: the orchestrator. It does NOT contain business rules.
@@ -10,25 +11,18 @@ import { RegisterUserCommand } from '../register-user.command';
 // One handler per command. The CommandBus routes the command here by class reference.
 @CommandHandler(RegisterUserCommand)
 export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand> {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+  ) {}
 
   async execute(
     command: RegisterUserCommand,
   ): Promise<{ id: string; email: string }> {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: command.email },
-    });
+    const existing = await this.userRepo.findByEmail(command.email);
     if (existing) throw new ConflictException('Email already in use');
 
     const user = await UserAggregate.register(command.email, command.password);
-
-    await this.prisma.user.create({
-      data: {
-        id: user.id,
-        email: user.email,
-        passwordHash: user.passwordHash,
-      },
-    });
+    await this.userRepo.save(user);
 
     return { id: user.id, email: user.email };
   }
