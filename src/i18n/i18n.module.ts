@@ -12,7 +12,7 @@ import * as path from 'path';
       },
       resolvers: [
         { use: QueryResolver, options: ['lang'] },
-        HeaderResolver(['accept-language']),
+        new HeaderResolver(['accept-language']),
       ],
     }),
   ],
