@@ -9,6 +9,7 @@ export const USER_REPOSITORY = Symbol('IUserRepository');
 export interface IUserRepository {
   findById(id: string): Promise<UserAggregate | null>;
   findByEmail(email: string): Promise<UserAggregate | null>;
+  findByGoogleId(googleId: string): Promise<UserAggregate | null>;
   findByVerificationToken(token: string): Promise<UserAggregate | null>;
   save(user: UserAggregate): Promise<void>;
 }

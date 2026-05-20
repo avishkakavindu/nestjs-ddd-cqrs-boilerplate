@@ -83,6 +83,33 @@ export class UserAggregate extends AggregateRoot {
     return new UserAggregate(props);
   }
 
+  // Google verified the email, so isEmailVerified is true from the start.
+  // No password — social login only until the user sets one.
+  static registerViaGoogle(
+    googleId: string,
+    email: string,
+    firstName: string,
+    lastName: string,
+  ): UserAggregate {
+    return new UserAggregate({
+      id: crypto.randomUUID(),
+      email,
+      firstName,
+      lastName,
+      passwordHash: null,
+      isEmailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationTokenExpiry: null,
+      googleId,
+      refreshTokenHash: null,
+    });
+  }
+
+  // Called when a password user signs in with Google for the first time — links the accounts.
+  linkGoogleAccount(googleId: string): UserAggregate {
+    return UserAggregate.reconstitute({ ...this.toProps(), googleId });
+  }
+
   verifyEmail(token: string): void {
     if (this.isEmailVerified) {
       throw new BadRequestException('Email is already verified');

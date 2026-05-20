@@ -47,6 +47,11 @@ export class PrismaUserRepository implements IUserRepository {
     return row ? this.toAggregate(row) : null;
   }
 
+  async findByGoogleId(googleId: string): Promise<UserAggregate | null> {
+    const row = await this.prisma.user.findUnique({ where: { googleId } });
+    return row ? this.toAggregate(row) : null;
+  }
+
   async findByVerificationToken(token: string): Promise<UserAggregate | null> {
     const row = await this.prisma.user.findUnique({
       where: { emailVerificationToken: token },

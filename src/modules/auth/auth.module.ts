@@ -7,14 +7,21 @@ import type { StringValue } from 'ms';
 import { AppConfigModule } from '../../config/config.module';
 import { AppConfigService } from '../../config/app-config.service';
 import { UsersModule } from '../users/users.module';
+import { GoogleLoginHandler } from './commands/handlers/google-login.handler';
 import { LoginHandler } from './commands/handlers/login.handler';
 import { LogoutHandler } from './commands/handlers/logout.handler';
 import { RefreshTokenHandler } from './commands/handlers/refresh-token.handler';
 import { AccessTokenStrategy } from './strategies/access-token.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { AuthController } from './auth.controller';
 
-const CommandHandlers = [LoginHandler, LogoutHandler, RefreshTokenHandler];
+const CommandHandlers = [
+  LoginHandler,
+  LogoutHandler,
+  RefreshTokenHandler,
+  GoogleLoginHandler,
+];
 
 // AuthModule owns all authentication infrastructure.
 // UsersModule is imported to access IUserRepository (needed by auth command handlers).
@@ -35,7 +42,12 @@ const CommandHandlers = [LoginHandler, LogoutHandler, RefreshTokenHandler];
     }),
   ],
   controllers: [AuthController],
-  providers: [...CommandHandlers, AccessTokenStrategy, RefreshTokenStrategy],
+  providers: [
+    ...CommandHandlers,
+    AccessTokenStrategy,
+    RefreshTokenStrategy,
+    GoogleStrategy,
+  ],
   exports: [JwtModule],
 })
 export class AuthModule {}
