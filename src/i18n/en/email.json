@@ -1,0 +1,10 @@
+{
+  "AUTH": {
+    "VERIFICATION": {
+      "SUBJECT": "Verify your email address"
+    },
+    "WELCOME": {
+      "SUBJECT": "Welcome to the platform!"
+    }
+  }
+}

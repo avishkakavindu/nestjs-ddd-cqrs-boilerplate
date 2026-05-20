@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 
+import { EmailModule } from '../email/email.module';
 import { ChangePasswordHandler } from './commands/handlers/change-password.handler';
 import { RegisterUserHandler } from './commands/handlers/register-user.handler';
 import { VerifyEmailHandler } from './commands/handlers/verify-email.handler';
@@ -26,7 +27,7 @@ const EventHandlers = [
 ];
 
 @Module({
-  imports: [CqrsModule],
+  imports: [CqrsModule, EmailModule],
   controllers: [UsersController],
   providers: [
     ...CommandHandlers,

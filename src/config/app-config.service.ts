@@ -64,6 +64,10 @@ export class AppConfigService {
     return this.config.get<number>('SMTP_PORT')!;
   }
 
+  get smtpSecure(): boolean {
+    return this.config.get<boolean>('SMTP_SECURE') ?? false;
+  }
+
   get smtpUser(): string {
     return this.config.get<string>('SMTP_USER')!;
   }

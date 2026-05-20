@@ -1,19 +1,29 @@
 import { Logger } from '@nestjs/common';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 
+import { AppConfigService } from '../../../../config/app-config.service';
+import { EmailService } from '../../../email/email.service';
 import { UserRegisteredEvent } from '../user-registered.event';
 
-// Event handler: reacts to a domain event. Runs after the command handler has saved state.
-// Responsible for side effects - email, audit log, read model update, etc.
-// If this fails, the user is already saved. Side effects are decoupled from the main transaction.
 @EventsHandler(UserRegisteredEvent)
 export class UserRegisteredHandler implements IEventHandler<UserRegisteredEvent> {
   private readonly logger = new Logger(UserRegisteredHandler.name);
 
-  handle(event: UserRegisteredEvent): void {
-    // TODO: inject EmailService and send verification email once email module (step 8) is built
-    this.logger.log(
-      `User registered: ${event.email} (id: ${event.userId}) - verification token: ${event.emailVerificationToken}`,
-    );
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly config: AppConfigService,
+  ) {}
+
+  async handle(event: UserRegisteredEvent): Promise<void> {
+    const verificationUrl = `${this.config.baseUrl}/api/v1/users/verify-email?token=${event.emailVerificationToken}`;
+
+    await this.emailService.sendVerificationEmail({
+      email: event.email,
+      firstName: event.firstName,
+      verificationUrl,
+      expiryHours: this.config.emailVerificationExpiryHours,
+    });
+
+    this.logger.log(`Verification email sent to ${event.email}`);
   }
 }

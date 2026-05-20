@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -67,6 +68,10 @@ class EnvironmentVariables {
   @IsNumber()
   @IsOptional()
   SMTP_PORT: number = 587;
+
+  @IsBoolean()
+  @IsOptional()
+  SMTP_SECURE: boolean = false;
 
   @IsString()
   @IsOptional()
