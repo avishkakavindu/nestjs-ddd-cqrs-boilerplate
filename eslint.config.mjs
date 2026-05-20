@@ -49,4 +49,12 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
     },
   },
+  {
+    files: ['test/**/*.ts'],
+    rules: {
+      // supertest types res.body as `any` — unsafe-* rules produce false positives in e2e tests.
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
 );

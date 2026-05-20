@@ -16,9 +16,9 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
     const user = await this.userRepo.findByVerificationToken(command.token);
     if (!user) throw new NotFoundException('Invalid verification token');
 
-    // verifyEmail() validates token match + expiry, raises UserEmailVerifiedEvent
-    const ctx = this.publisher.mergeObjectContext(user);
-    ctx.verifyEmail(command.token);
+    // verifyEmail() validates token + expiry, returns a new verified aggregate, raises UserEmailVerifiedEvent
+    const verified = user.verifyEmail(command.token);
+    const ctx = this.publisher.mergeObjectContext(verified);
 
     await this.userRepo.save(ctx);
     ctx.commit();

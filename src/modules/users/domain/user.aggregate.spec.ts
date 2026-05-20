@@ -143,14 +143,36 @@ describe('UserAggregate.verifyEmail', () => {
   const token = 'valid-token-abc';
   const futureExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
-  it('queues UserEmailVerifiedEvent on success', () => {
+  it('returns a new aggregate with isEmailVerified true and token cleared', () => {
+    const user = makeUser({
+      isEmailVerified: false,
+      emailVerificationToken: token,
+      emailVerificationTokenExpiry: futureExpiry,
+    });
+    const verified = user.verifyEmail(token);
+    expect(verified.isEmailVerified).toBe(true);
+    expect(verified.emailVerificationToken).toBeNull();
+    expect(verified.emailVerificationTokenExpiry).toBeNull();
+  });
+
+  it('does not mutate the original aggregate', () => {
     const user = makeUser({
       isEmailVerified: false,
       emailVerificationToken: token,
       emailVerificationTokenExpiry: futureExpiry,
     });
     user.verifyEmail(token);
-    const events = user.getUncommittedEvents();
+    expect(user.isEmailVerified).toBe(false);
+  });
+
+  it('queues UserEmailVerifiedEvent on the returned aggregate', () => {
+    const user = makeUser({
+      isEmailVerified: false,
+      emailVerificationToken: token,
+      emailVerificationTokenExpiry: futureExpiry,
+    });
+    const verified = user.verifyEmail(token);
+    const events = verified.getUncommittedEvents();
     expect(events).toHaveLength(1);
     expect(events[0]).toBeInstanceOf(UserEmailVerifiedEvent);
   });

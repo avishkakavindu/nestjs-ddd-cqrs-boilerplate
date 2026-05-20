@@ -115,7 +115,7 @@ export class UserAggregate extends AggregateRoot {
     return UserAggregate.reconstitute({ ...this.toProps(), googleId });
   }
 
-  verifyEmail(token: string): void {
+  verifyEmail(token: string): UserAggregate {
     if (this.isEmailVerified) {
       throw new BadRequestException('Email is already verified');
     }
@@ -128,8 +128,16 @@ export class UserAggregate extends AggregateRoot {
     ) {
       throw new UnauthorizedException('Verification token has expired');
     }
-    // Aggregate is immutable — state changes produce a new instance via reconstitute in the handler
-    this.apply(new UserEmailVerifiedEvent(this.id, this.email, this.firstName));
+    const verified = UserAggregate.reconstitute({
+      ...this.toProps(),
+      isEmailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationTokenExpiry: null,
+    });
+    verified.apply(
+      new UserEmailVerifiedEvent(this.id, this.email, this.firstName),
+    );
+    return verified;
   }
 
   async validatePassword(password: string): Promise<void> {

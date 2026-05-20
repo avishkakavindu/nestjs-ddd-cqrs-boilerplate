@@ -13,6 +13,7 @@ describe('VerifyEmailHandler', () => {
   >;
   let mockPublisher: { mergeObjectContext: jest.Mock };
   let fakeUser: UserAggregate;
+  let verifiedUser: UserAggregate;
   let commitSpy: jest.Mock;
   let verifyEmailSpy: jest.SpyInstance;
 
@@ -30,10 +31,23 @@ describe('VerifyEmailHandler', () => {
       refreshTokenHash: null,
     });
 
+    verifiedUser = UserAggregate.reconstitute({
+      id: 'user-1',
+      email: 'john@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      passwordHash: null,
+      isEmailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationTokenExpiry: null,
+      googleId: null,
+      refreshTokenHash: null,
+    });
+
     commitSpy = jest.fn();
     verifyEmailSpy = jest
       .spyOn(fakeUser, 'verifyEmail')
-      .mockImplementation(() => {});
+      .mockReturnValue(verifiedUser);
 
     mockRepo = {
       findByVerificationToken: jest.fn().mockResolvedValue(fakeUser),
@@ -76,9 +90,9 @@ describe('VerifyEmailHandler', () => {
     expect(verifyEmailSpy).toHaveBeenCalledWith('valid-token');
   });
 
-  it('saves the user and commits events', async () => {
+  it('saves the verified aggregate and commits events', async () => {
     await handler.execute(new VerifyEmailCommand('valid-token'));
-    expect(mockRepo.save).toHaveBeenCalledWith(fakeUser);
+    expect(mockRepo.save).toHaveBeenCalledWith(verifiedUser);
     expect(commitSpy).toHaveBeenCalled();
   });
 });
