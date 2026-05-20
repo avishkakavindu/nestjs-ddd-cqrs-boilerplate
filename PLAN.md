@@ -20,19 +20,19 @@
 
 ### Infrastructure
 
-| #   | Step                                                                | Status  | Commit                           |
-| --- | ------------------------------------------------------------------- | ------- | -------------------------------- |
-| 1   | Scaffold NestJS project (`nest new`)                                | done    | `chore: initial project setup`   |
-| 2   | Config module (`@nestjs/config` + class-validator env validation)   | done    | `chore: initial project setup`   |
-| 3   | Logger module (Pino + nestjs-pino)                                  | done    | `chore: initial project setup`   |
-| 4   | Husky + lint-staged + conventional commits                          | done    | `chore: fix commit-msg hook`     |
-| 5   | Prisma setup (schema, PrismaService, PrismaModule, migrations)      | done    | `feat: add Prisma setup`         |
-| 6   | Health check module (`@nestjs/terminus`)                            | done    | `feat: add health check`         |
-| 7   | i18n module (`nestjs-i18n`)                                         | done    | `feat: add i18n module`          |
-| 8   | Email module (Nodemailer + Handlebars)                              | pending | -                                |
-| 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | done    | `feat: add common layer`         |
-| 10  | Security (Helmet, CORS, Throttler) + Swagger + main.ts bootstrap    | done    | `feat: add security and swagger` |
-| 11  | Docker + docker-compose (app + PostgreSQL)                          | done    | `feat: add Docker setup`         |
+| #   | Step                                                                | Status | Commit                                                                                          |
+| --- | ------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| 1   | Scaffold NestJS project (`nest new`)                                | done   | `chore: initial project setup`                                                                  |
+| 2   | Config module (`@nestjs/config` + class-validator env validation)   | done   | `chore: initial project setup`                                                                  |
+| 3   | Logger module (Pino + nestjs-pino)                                  | done   | `chore: initial project setup`                                                                  |
+| 4   | Husky + lint-staged + conventional commits                          | done   | `chore: fix commit-msg hook`                                                                    |
+| 5   | Prisma setup (schema, PrismaService, PrismaModule, migrations)      | done   | `feat: add Prisma setup`                                                                        |
+| 6   | Health check module (`@nestjs/terminus`)                            | done   | `feat: add health check`                                                                        |
+| 7   | i18n module (`nestjs-i18n`)                                         | done   | `feat: add i18n module`                                                                         |
+| 8   | Email module (Nodemailer + Handlebars)                              | done   | `feat: add email module with Nodemailer, Handlebars templates, and verification/welcome emails` |
+| 9   | Common layer (filters, interceptors, pipes, decorators, pagination) | done   | `feat: add common layer`                                                                        |
+| 10  | Security (Helmet, CORS, Throttler) + Swagger + main.ts bootstrap    | done   | `feat: add security and swagger`                                                                |
+| 11  | Docker + docker-compose (app + PostgreSQL)                          | done   | `feat: add Docker setup`                                                                        |
 
 ### CQRS + DDD (Users domain)
 
@@ -48,18 +48,18 @@
 
 ### Auth (CQRS-style)
 
-| #   | Step                                                   | Status  | Commit |
-| --- | ------------------------------------------------------ | ------- | ------ |
-| 19  | JWT strategy + guards (access + refresh tokens)        | pending | -      |
-| 20  | Login + Logout + Refresh as Commands on User Aggregate | pending | -      |
-| 21  | Google OAuth2 strategy                                 | pending | -      |
+| #   | Step                                                   | Status | Commit                                                                       |
+| --- | ------------------------------------------------------ | ------ | ---------------------------------------------------------------------------- |
+| 19  | JWT strategy + guards (access + refresh tokens)        | done   | `feat: add JWT auth with global guard, login, logout, and refresh endpoints` |
+| 20  | Login + Logout + Refresh as Commands on User Aggregate | done   | `feat: add JWT auth with global guard, login, logout, and refresh endpoints` |
+| 21  | Google OAuth2 strategy                                 | done   | `feat: add Google OAuth2 strategy with find-or-create and account linking`   |
 
 ### Tests
 
-| #   | Step                                            | Status  | Commit |
-| --- | ----------------------------------------------- | ------- | ------ |
-| 22  | Aggregate unit tests (pure functions, no mocks) | pending | -      |
-| 23  | Handler unit tests (mocked `IUserRepository`)   | pending | -      |
+| #   | Step                                            | Status | Commit                                                                             |
+| --- | ----------------------------------------------- | ------ | ---------------------------------------------------------------------------------- |
+| 22  | Aggregate unit tests (pure functions, no mocks) | done   | `test: add UserAggregate unit tests covering all business rules and domain events` |
+| 23  | Handler unit tests (mocked `IUserRepository`)   | done   | `test(TASK-23): add handler unit tests with mocked IUserRepository`                |
 
 ---
 
@@ -89,9 +89,8 @@ Read side:
 
 ## Domain Events
 
-| Event                      | Triggered by           | Handler side effect                       |
-| -------------------------- | ---------------------- | ----------------------------------------- |
-| `UserRegisteredEvent`      | RegisterUser command   | Log token (TODO: send verification email) |
-| `UserEmailVerifiedEvent`   | VerifyEmail command    | Log (TODO: send welcome email)            |
-| `UserLoggedInEvent`        | Login command          | Write audit log                           |
-| `UserPasswordChangedEvent` | ChangePassword command | Log (TODO: send security alert email)     |
+| Event                      | Triggered by           | Handler side effect             |
+| -------------------------- | ---------------------- | ------------------------------- |
+| `UserRegisteredEvent`      | RegisterUser command   | Send verification email         |
+| `UserEmailVerifiedEvent`   | VerifyEmail command    | Send welcome email              |
+| `UserPasswordChangedEvent` | ChangePassword command | (no handler — extend as needed) |

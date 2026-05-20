@@ -1,6 +1,6 @@
 # NestJS CQRS + Light DDD Boilerplate
 
-A learning-focused NestJS boilerplate that demonstrates **CQRS** and **Light Domain-Driven Design (DDD)** patterns step by step. The domain example used throughout is **Users**.
+A learning-focused NestJS boilerplate demonstrating **CQRS** and **Light Domain-Driven Design** patterns, built step by step. The domain example used throughout is **Users** with full authentication.
 
 ---
 
@@ -10,7 +10,7 @@ Most NestJS tutorials put everything in a service class — business rules, data
 
 - **CQRS** separates _writes_ (commands) from _reads_ (queries)
 - **Light DDD** puts business rules inside an Aggregate class, not in services
-- Each concern lives in its own file with a clear, single responsibility
+- **Domain Events** decouple side effects (emails, logs) from the commands that trigger them
 
 This is not an enterprise-level framework. It is a reference project designed so you can read the code and understand why each piece exists.
 
@@ -22,18 +22,19 @@ This is not an enterprise-level framework. It is a reference project designed so
 | ------------------------- | ------------------------------------------- |
 | NestJS 11                 | Framework, dependency injection, modules    |
 | TypeScript (strict)       | Type safety                                 |
-| PostgreSQL                | Database                                    |
-| Prisma 7                  | ORM and migrations                          |
+| PostgreSQL + Prisma 7     | Database and migrations                     |
 | `@nestjs/cqrs`            | CommandBus, QueryBus, EventBus              |
+| Passport.js + JWT         | Access and refresh token auth               |
+| Google OAuth2             | Social login via passport-google-oauth20    |
+| Nodemailer + Handlebars   | Transactional email with templates          |
+| nestjs-i18n               | Translated email subjects                   |
 | Pino (`nestjs-pino`)      | Structured JSON logging                     |
 | `@nestjs/config`          | Environment variable loading and validation |
 | class-validator           | DTO validation                              |
-| JWT                       | Access and refresh token auth               |
-| Google OAuth2             | Social login                                |
-| Nodemailer + Handlebars   | Email sending                               |
-| Helmet + CORS + Throttler | Security                                    |
-| Swagger                   | API documentation                           |
+| Helmet + CORS + Throttler | Security hardening                          |
+| Swagger                   | API documentation at `/api`                 |
 | Husky + commitlint        | Git hooks and conventional commits          |
+| Docker + docker-compose   | App container + PostgreSQL + pgAdmin        |
 
 ---
 
@@ -43,32 +44,26 @@ This is not an enterprise-level framework. It is a reference project designed so
 # Install dependencies
 npm install
 
-# Run in development (watch mode)
+# Development (watch mode)
 npm run start:dev
 
 # Build
 npm run build
 
-# Run all unit tests
+# Unit tests
 npm run test
 
-# Run e2e tests
+# e2e tests
 npm run test:e2e
 
-# Lint
+# Lint and format
 npm run lint
-
-# Format
 npm run format
 
-# Prisma: create and apply a migration
-npm run prisma:migrate
-
-# Prisma: open Prisma Studio (GUI for your database)
-npm run prisma:studio
-
-# Prisma: regenerate the client after schema changes
-npm run prisma:generate
+# Prisma
+npm run prisma:migrate    # create and apply a migration
+npm run prisma:generate   # regenerate the client after schema changes
+npm run prisma:studio     # open Prisma Studio (database GUI)
 ```
 
 ---
@@ -86,14 +81,14 @@ Split every operation into one of two types:
 | **Command** | Changes state (create, update, delete) | Yes                |
 | **Query**   | Reads state (get, list)                | No                 |
 
-Why? Because the code that _changes_ data needs business rules and validation. The code that _reads_ data just needs to be fast. Keeping them separate means neither gets cluttered with the other's concerns.
+The code that _changes_ data needs business rules and validation. The code that _reads_ data just needs to be fast. Keeping them separate means neither gets cluttered with the other's concerns.
 
-#### 2. Light DDD — Domain-Driven Design (Aggregates + Domain Events only)
+#### 2. Light DDD — Aggregates + Domain Events only
 
-"Light" means we skip the heavy DDD machinery (bounded contexts, value objects, repository interfaces over ORMs). We keep only the two most useful ideas:
+"Light" means we skip the heavy DDD machinery (bounded contexts, value objects, sagas). We keep only the two most useful ideas:
 
-- **Aggregate** — A class that owns the business rules for one entity (e.g. `User`). All if/else business logic lives here.
-- **Domain Events** — Facts that something happened (e.g. `UserRegisteredEvent`). The Aggregate raises them; handlers react to them (send email, write audit log, etc.).
+- **Aggregate** — A class that owns the business rules for one entity (`UserAggregate`). All if/else business logic lives here. The Aggregate never imports Prisma.
+- **Domain Events** — Facts named in past tense (`UserRegisteredEvent`). The Aggregate raises them; separate handlers react (send email, write audit log).
 
 ---
 
@@ -102,26 +97,69 @@ Why? Because the code that _changes_ data needs business rules and validation. T
 ### Write side (Command)
 
 ```
-HTTP POST /users/register
+HTTP POST /v1/users/register
   -> UsersController
-  -> CommandBus.execute(new RegisterUserCommand(dto))
+  -> CommandBus.execute(new RegisterUserCommand(...))
   -> RegisterUserHandler
-      -> UserAggregate.register(email, password)   <- business rules here
-      -> prisma.user.create(...)                   <- handler persists
-      -> EventBus.publish(new UserRegisteredEvent) <- raised by Aggregate
+      -> IUserRepository.findByEmail()      <- check for duplicates
+      -> UserAggregate.register(...)        <- business rules, password hashing
+      -> IUserRepository.save()             <- handler persists via Prisma
+      -> EventPublisher.mergeObjectContext()
+      -> aggregate.commit()                 <- dispatches domain events
   -> UserRegisteredHandler
-      -> EmailService.sendVerification(email)      <- side effect
+      -> EmailService.sendVerificationEmail()
 ```
 
 ### Read side (Query)
 
 ```
-HTTP GET /users/:id
+HTTP GET /v1/users/:id
   -> UsersController
   -> QueryBus.execute(new GetUserQuery(id))
   -> GetUserHandler
-      -> prisma.user.findUnique(...)               <- direct DB read, no Aggregate
+      -> PrismaService.user.findUnique()    <- direct DB read, no Aggregate
       -> return UserDto
+```
+
+---
+
+## Authentication Flow
+
+All endpoints are protected by a global `JwtAuthGuard`. Public endpoints (login, register, etc.) are marked with `@Public()`.
+
+### Login
+
+```
+POST /v1/auth/login
+  -> LoginHandler
+      -> IUserRepository.findByEmail()
+      -> user.validatePassword()            <- bcrypt compare, checks verified
+      -> JwtService.sign()                  <- access token (15 min)
+      -> JwtService.sign()                  <- refresh token (7 days, own secret)
+      -> user.setRefreshToken()             <- bcrypt hash stored in DB
+      -> return { accessToken, refreshToken }
+```
+
+### Refresh
+
+```
+POST /v1/auth/refresh  (Bearer <refreshToken>)
+  -> JwtRefreshGuard validates token signature
+  -> RefreshTokenHandler
+      -> bcrypt.compare(raw, stored hash)
+      -> JwtService.sign()                  <- new access token
+      -> return { accessToken }
+```
+
+### Google OAuth
+
+```
+GET /v1/auth/google          -> redirects to Google consent screen
+GET /v1/auth/google/callback -> GoogleLoginHandler
+    -> findByGoogleId()      <- existing social user
+    -> findByEmail()         <- email match -> link Google account
+    -> registerViaGoogle()   <- new user, no password hash
+    -> return { accessToken, refreshToken }
 ```
 
 ---
@@ -132,483 +170,156 @@ HTTP GET /users/:id
 nestjs-cqrs-boilerplate/
 |
 |- prisma/
-|   |- schema.prisma          <- Database schema (models, relations)
-|   |- migrations/            <- Auto-generated migration files
-|
-|- prisma.config.ts           <- Prisma CLI configuration (datasource URL)
+|   |- schema.prisma              <- Database schema
+|   |- migrations/                <- Generated SQL migrations
 |
 |- src/
 |   |
-|   |   // --- Infrastructure (cross-cutting, no business logic) ---
+|   |   // Infrastructure (cross-cutting, no business logic)
 |   |
-|   |- config/                <- Environment variable loading & validation
-|   |   |- config.module.ts
-|   |   |- app-config.service.ts
-|   |   |- env.validation.ts
+|   |- config/                    <- Env variable loading and validation
+|   |- logger/                    <- Pino structured logger
+|   |- prisma/                    <- PrismaService (global)
+|   |- health/                    <- /health endpoint
+|   |- i18n/                      <- Translation JSON files
+|   |- common/                    <- Shared filters, decorators, DTOs
 |   |
-|   |- logger/                <- Pino structured logger setup
-|   |   |- logger.module.ts
-|   |
-|   |- prisma/                <- Database client (PrismaService)
-|   |   |- prisma.module.ts
-|   |   |- prisma.service.ts
-|   |
-|   |- health/                <- Health check endpoint (/health)
-|   |   |- health.controller.ts
-|   |   |- health.module.ts
-|   |
-|   |- i18n/                  <- Translations
-|   |   |- en/
-|   |   |   |- common.json
-|   |   |   |- auth.json
-|   |   |   |- users.json
-|   |   |- i18n.module.ts
-|   |
-|   |- common/                <- Shared utilities used across all modules
-|   |   |- filters/
-|   |   |   |- all-exceptions.filter.ts
-|   |   |- decorators/
-|   |   |   |- current-user.decorator.ts
-|   |   |- dto/
-|   |   |   |- pagination.dto.ts
-|   |   |- common.module.ts
-|   |
-|   |   // --- Domain modules (business logic lives here) ---
+|   |   // Domain modules
 |   |
 |   |- modules/
 |   |   |
-|   |   |- users/             <- Users domain
+|   |   |- users/
 |   |   |   |- commands/
 |   |   |   |   |- register-user.command.ts
+|   |   |   |   |- verify-email.command.ts
+|   |   |   |   |- change-password.command.ts
 |   |   |   |   |- handlers/
 |   |   |   |       |- register-user.handler.ts
+|   |   |   |       |- register-user.handler.spec.ts
+|   |   |   |       |- verify-email.handler.ts
+|   |   |   |       |- verify-email.handler.spec.ts
+|   |   |   |       |- change-password.handler.ts
+|   |   |   |       |- change-password.handler.spec.ts
 |   |   |   |
 |   |   |   |- queries/
 |   |   |   |   |- get-user.query.ts
+|   |   |   |   |- list-users.query.ts
 |   |   |   |   |- handlers/
 |   |   |   |       |- get-user.handler.ts
+|   |   |   |       |- list-users.handler.ts
 |   |   |   |
 |   |   |   |- events/
 |   |   |   |   |- user-registered.event.ts
+|   |   |   |   |- user-email-verified.event.ts
+|   |   |   |   |- user-password-changed.event.ts
 |   |   |   |   |- handlers/
-|   |   |   |       |- user-registered.handler.ts
+|   |   |   |       |- user-registered.handler.ts     <- sends verification email
+|   |   |   |       |- user-email-verified.handler.ts <- sends welcome email
 |   |   |   |
 |   |   |   |- domain/
 |   |   |   |   |- user.aggregate.ts
+|   |   |   |   |- user.aggregate.spec.ts
+|   |   |   |   |- user.repository.ts                <- IUserRepository interface
+|   |   |   |
+|   |   |   |- infrastructure/
+|   |   |   |   |- prisma-user.repository.ts         <- Prisma implementation
 |   |   |   |
 |   |   |   |- users.controller.ts
 |   |   |   |- users.module.ts
 |   |   |
-|   |   |- posts/             <- Posts domain (same pattern, different domain)
+|   |   |- auth/
 |   |   |   |- commands/
-|   |   |   |   |- create-post.command.ts
-|   |   |   |   |- publish-post.command.ts
+|   |   |   |   |- login.command.ts
+|   |   |   |   |- logout.command.ts
+|   |   |   |   |- refresh-token.command.ts
+|   |   |   |   |- google-login.command.ts
 |   |   |   |   |- handlers/
-|   |   |   |       |- create-post.handler.ts
-|   |   |   |       |- publish-post.handler.ts
+|   |   |   |       |- login.handler.ts
+|   |   |   |       |- login.handler.spec.ts
+|   |   |   |       |- logout.handler.ts
+|   |   |   |       |- logout.handler.spec.ts
+|   |   |   |       |- refresh-token.handler.ts
+|   |   |   |       |- refresh-token.handler.spec.ts
+|   |   |   |       |- google-login.handler.ts
 |   |   |   |
-|   |   |   |- queries/
-|   |   |   |   |- get-post.query.ts
-|   |   |   |   |- list-posts.query.ts
-|   |   |   |   |- handlers/
-|   |   |   |       |- get-post.handler.ts
-|   |   |   |       |- list-posts.handler.ts
+|   |   |   |- strategies/
+|   |   |   |   |- access-token.strategy.ts          <- 'jwt' strategy
+|   |   |   |   |- refresh-token.strategy.ts         <- 'jwt-refresh' strategy
+|   |   |   |   |- google.strategy.ts                <- 'google' strategy
 |   |   |   |
-|   |   |   |- events/
-|   |   |   |   |- post-published.event.ts
-|   |   |   |   |- handlers/
-|   |   |   |       |- post-published.handler.ts
+|   |   |   |- guards/
+|   |   |   |   |- jwt-auth.guard.ts                 <- global guard with @Public() escape
+|   |   |   |   |- jwt-refresh.guard.ts
+|   |   |   |   |- google-auth.guard.ts
 |   |   |   |
-|   |   |   |- domain/
-|   |   |   |   |- post.aggregate.ts
-|   |   |   |
-|   |   |   |- posts.controller.ts
-|   |   |   |- posts.module.ts
+|   |   |   |- auth.controller.ts
+|   |   |   |- auth.module.ts
+|   |   |
+|   |   |- email/
+|   |   |   |- email.service.ts                      <- business email layer
+|   |   |   |- email.module.ts
+|   |   |   |- templates/
+|   |   |       |- verify-email.hbs
+|   |   |       |- welcome-email.hbs
+|   |   |
+|   |   |- app-mailer/
+|   |       |- app-mailer.module.ts                  <- SMTP infrastructure (MailerModule)
 |   |
-|   |- app.module.ts          <- Root module, imports all feature modules
-|   |- main.ts                <- Entry point, bootstrap
+|   |- app.module.ts
+|   |- main.ts
 |
-|- .env                       <- Your local environment variables (not committed)
-|- .env.example               <- Template showing which variables are needed
-|- PLAN.md                    <- Step-by-step build plan with status tracking
+|- .env.example                   <- Template showing required variables
+|- PLAN.md                        <- Step-by-step build plan with status
+|- docs/
+    |- PATTERNS.md                <- Deeper explanation of CQRS and DDD patterns
 ```
-
----
-
-## What Each Folder Does
-
-### `prisma/`
-
-Holds everything the Prisma CLI needs.
-
-- **`schema.prisma`** — defines your database tables as Prisma models:
-
-```prisma
-model User {
-  id              String   @id @default(cuid())
-  email           String   @unique
-  passwordHash    String?
-  isEmailVerified Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-```
-
-- **`migrations/`** — Prisma generates one folder per migration with the raw SQL. Never edit these by hand.
-
-### `prisma.config.ts`
-
-Config file for the Prisma CLI (not for the running app). Tells Prisma where to find the database when running `prisma migrate` or `prisma generate`:
-
-```ts
-export default defineConfig({
-  datasource: {
-    url: env('DATABASE_URL'), // reads from .env
-  },
-});
-```
-
-### `src/config/`
-
-Loads and validates all environment variables at startup. The app refuses to boot if any required variable is missing or has the wrong type.
-
-- **`env.validation.ts`** — declares every expected env variable with its type and whether it's required:
-
-```ts
-class EnvironmentVariables {
-  @IsString()
-  DATABASE_URL: string; // required — app won't start without it
-
-  @IsNumber()
-  @IsOptional()
-  PORT: number = 3000; // optional — defaults to 3000
-}
-```
-
-- **`app-config.service.ts`** — a typed wrapper so you inject `AppConfigService` instead of raw `ConfigService`. Every value has a proper TypeScript type:
-
-```ts
-// Instead of this (string, easy to typo the key):
-this.configService.get<string>('DATABASE_URL');
-
-// You do this (typed property, autocomplete works):
-this.appConfigService.databaseUrl;
-```
-
-- **`config.module.ts`** — marked `@Global()` so it only needs to be imported once in `AppModule`. All other modules get `AppConfigService` automatically.
-
-### `src/logger/`
-
-Sets up Pino as the app-wide logger. Pino writes structured JSON logs (better for production log aggregators like Datadog or CloudWatch) and is much faster than NestJS's default logger.
-
-### `src/prisma/`
-
-Wraps `PrismaClient` in a NestJS service so it participates in the dependency injection system.
-
-- **`prisma.service.ts`** — extends `PrismaClient` and connects/disconnects with the module lifecycle:
-
-```ts
-@Injectable()
-export class PrismaService
-  extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
-  constructor(config: AppConfigService) {
-    const adapter = new PrismaPg({ connectionString: config.databaseUrl });
-    super({ adapter });
-  }
-
-  async onModuleInit() {
-    await this.$connect();
-  }
-  async onModuleDestroy() {
-    await this.$disconnect();
-  }
-}
-```
-
-- **`prisma.module.ts`** — marked `@Global()`, so any module in the app can inject `PrismaService` without re-importing `PrismaModule`.
-
-### `src/modules/users/` (added in later steps)
-
-This is where the CQRS + DDD pattern comes to life. Here is what each sub-folder holds:
-
-#### `commands/`
-
-A command is a plain object that describes _what you want to do_. No logic — just data:
-
-```ts
-// register-user.command.ts
-export class RegisterUserCommand {
-  constructor(
-    public readonly email: string,
-    public readonly password: string,
-  ) {}
-}
-```
-
-#### `commands/handlers/`
-
-The handler receives the command, orchestrates the Aggregate, persists the result, and publishes events:
-
-```ts
-@CommandHandler(RegisterUserCommand)
-export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand> {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly eventBus: EventBus,
-  ) {}
-
-  async execute(command: RegisterUserCommand) {
-    const user = UserAggregate.register(command.email, command.password);
-    await this.prisma.user.create({ data: { ...user } });
-    this.eventBus.publish(new UserRegisteredEvent(user.id, user.email));
-  }
-}
-```
-
-#### `queries/` and `queries/handlers/`
-
-A query is also a plain object — just the parameters for the read:
-
-```ts
-// get-user.query.ts
-export class GetUserQuery {
-  constructor(public readonly id: string) {}
-}
-```
-
-The handler goes straight to the database — no Aggregate involved:
-
-```ts
-@QueryHandler(GetUserQuery)
-export class GetUserHandler implements IQueryHandler<GetUserQuery> {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async execute(query: GetUserQuery) {
-    return this.prisma.user.findUnique({ where: { id: query.id } });
-  }
-}
-```
-
-#### `events/`
-
-An event is a fact in past tense — it describes something that already happened:
-
-```ts
-// user-registered.event.ts
-export class UserRegisteredEvent {
-  constructor(
-    public readonly userId: string,
-    public readonly email: string,
-  ) {}
-}
-```
-
-#### `events/handlers/`
-
-Handles side effects after an event fires. The command handler doesn't care about these — it just publishes the event and moves on:
-
-```ts
-@EventsHandler(UserRegisteredEvent)
-export class UserRegisteredHandler implements IEventHandler<UserRegisteredEvent> {
-  async handle(event: UserRegisteredEvent) {
-    // send verification email, write audit log, etc.
-  }
-}
-```
-
-#### `domain/`
-
-The Aggregate is the most important class in the domain. It contains all the business rules:
-
-```ts
-// user.aggregate.ts
-export class UserAggregate {
-  id: string;
-  email: string;
-  passwordHash: string;
-  isEmailVerified = false;
-
-  static register(email: string, password: string): UserAggregate {
-    // business rule: email must be valid
-    // business rule: password must meet requirements
-    // no database calls here — pure logic only
-    const user = new UserAggregate();
-    user.id = cuid();
-    user.email = email;
-    user.passwordHash = hashPassword(password);
-    return user;
-  }
-}
-```
-
-Key rule: **the Aggregate never imports Prisma**. It only knows about the domain — not about how data is stored.
-
----
-
-### `src/modules/posts/` (second domain — same pattern, different context)
-
-Posts follow the exact same structure as Users. This is the point: once you learn the pattern for one domain, adding a new one is mechanical.
-
-#### `commands/`
-
-Two commands — one to create a draft, one to publish it:
-
-```ts
-// create-post.command.ts
-export class CreatePostCommand {
-  constructor(
-    public readonly authorId: string,
-    public readonly title: string,
-    public readonly body: string,
-  ) {}
-}
-
-// publish-post.command.ts
-export class PublishPostCommand {
-  constructor(public readonly postId: string) {}
-}
-```
-
-#### `commands/handlers/`
-
-Each command gets its own handler. `PublishPostHandler` loads the existing post, runs the domain logic, and persists the change:
-
-```ts
-@CommandHandler(PublishPostCommand)
-export class PublishPostHandler implements ICommandHandler<PublishPostCommand> {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly eventBus: EventBus,
-  ) {}
-
-  async execute(command: PublishPostCommand) {
-    const row = await this.prisma.post.findUniqueOrThrow({
-      where: { id: command.postId },
-    });
-    const post = PostAggregate.fromPersistence(row);
-
-    post.publish(); // business rule lives here, not here in the handler
-
-    await this.prisma.post.update({
-      where: { id: post.id },
-      data: { publishedAt: post.publishedAt },
-    });
-
-    this.eventBus.publish(new PostPublishedEvent(post.id, post.authorId));
-  }
-}
-```
-
-#### `queries/` and `queries/handlers/`
-
-Queries skip the Aggregate entirely. `ListPostsQuery` reads directly from the database:
-
-```ts
-// list-posts.query.ts
-export class ListPostsQuery {
-  constructor(
-    public readonly page: number,
-    public readonly limit: number,
-  ) {}
-}
-
-// list-posts.handler.ts
-@QueryHandler(ListPostsQuery)
-export class ListPostsHandler implements IQueryHandler<ListPostsQuery> {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async execute(query: ListPostsQuery) {
-    return this.prisma.post.findMany({
-      where: { publishedAt: { not: null } },
-      orderBy: { publishedAt: 'desc' },
-      skip: (query.page - 1) * query.limit,
-      take: query.limit,
-    });
-  }
-}
-```
-
-#### `events/` and `events/handlers/`
-
-The `PostPublishedEvent` is raised by the handler after publishing. Any number of handlers can react to it independently:
-
-```ts
-// post-published.event.ts
-export class PostPublishedEvent {
-  constructor(
-    public readonly postId: string,
-    public readonly authorId: string,
-  ) {}
-}
-
-// post-published.handler.ts
-@EventsHandler(PostPublishedEvent)
-export class PostPublishedHandler implements IEventHandler<PostPublishedEvent> {
-  async handle(event: PostPublishedEvent) {
-    // notify followers, update author stats, index for search, etc.
-  }
-}
-```
-
-#### `domain/`
-
-The `PostAggregate` holds all post business rules. Notice `publish()` enforces the rule that a post must have a body before it can be published — and the handler never checks this itself:
-
-```ts
-// post.aggregate.ts
-export class PostAggregate {
-  id: string;
-  authorId: string;
-  title: string;
-  body: string;
-  publishedAt: Date | null = null;
-
-  static fromPersistence(row: {
-    id: string;
-    authorId: string;
-    title: string;
-    body: string;
-    publishedAt: Date | null;
-  }): PostAggregate {
-    const post = new PostAggregate();
-    Object.assign(post, row);
-    return post;
-  }
-
-  publish(): void {
-    if (!this.body) throw new Error('Cannot publish a post with no body');
-    if (this.publishedAt) throw new Error('Post is already published');
-    this.publishedAt = new Date();
-  }
-}
-```
-
-#### Comparison: Users vs Posts
-
-|                     | Users                               | Posts                                     |
-| ------------------- | ----------------------------------- | ----------------------------------------- |
-| Command             | `RegisterUserCommand`               | `CreatePostCommand`, `PublishPostCommand` |
-| Query               | `GetUserQuery`                      | `GetPostQuery`, `ListPostsQuery`          |
-| Event               | `UserRegisteredEvent`               | `PostPublishedEvent`                      |
-| Aggregate rule      | password strength, email uniqueness | must have body before publishing          |
-| Handler side effect | send verification email             | notify followers                          |
-
-The structure is identical. Only the domain logic changes.
 
 ---
 
 ## Key Rules (Quick Reference)
 
-| Rule                                            | Why                                                                                  |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Business logic belongs in the Aggregate         | Keeps handlers thin and logic testable without a database                            |
-| Handlers do the persistence                     | Aggregates stay pure — no DB dependency                                              |
-| Queries never use the Aggregate                 | Read paths are simpler and faster without domain logic                               |
-| Domain events are past tense                    | They describe facts, not intentions (`UserRegisteredEvent`, not `RegisterUserEvent`) |
-| `AppConfigService` instead of raw `process.env` | Validated at startup, typed, injectable                                              |
-| `PrismaModule` is global                        | One import in `AppModule`; available everywhere                                      |
+| Rule                                         | Why                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------ |
+| Business logic belongs in the Aggregate      | Keeps handlers thin and logic testable without a database                      |
+| Handlers do the persistence                  | Aggregates stay pure — no DB dependency                                        |
+| Queries never use the Aggregate              | Read paths are simpler and faster without domain logic                         |
+| Domain events are named in past tense        | They are facts, not intentions (`UserRegisteredEvent` not `RegisterUserEvent`) |
+| Event handlers own all side effects          | Commands don't know about emails or logs — they just commit events             |
+| `@Public()` marks open endpoints             | The global `JwtAuthGuard` protects everything else automatically               |
+| `import type` for decorated injection tokens | Required by TypeScript `isolatedModules` + `emitDecoratorMetadata`             |
+
+---
+
+## UserAggregate — Business Rules at a Glance
+
+The `UserAggregate` is the heart of the Users domain. All state-changing methods return a **new instance** (immutable) and raise domain events:
+
+| Method                              | What it enforces                                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `UserAggregate.register()`          | Hashes password, generates email verification token (24h expiry), raises `UserRegisteredEvent` |
+| `UserAggregate.registerViaGoogle()` | No password, email pre-verified, no domain event                                               |
+| `verifyEmail(token)`                | Checks token match and expiry, raises `UserEmailVerifiedEvent`                                 |
+| `validatePassword(plain)`           | Requires verified email, bcrypt compare                                                        |
+| `changePassword(old, new)`          | Validates old password first, raises `UserPasswordChangedEvent`                                |
+| `setRefreshToken(raw)`              | Hashes before storing — raw token never persisted                                              |
+| `clearRefreshToken()`               | Sets hash to null (logout)                                                                     |
+| `linkGoogleAccount(googleId)`       | Returns new instance with googleId set                                                         |
+
+---
+
+## Email Architecture
+
+Two-layer design — infrastructure is separated from business intent:
+
+```
+AppMailerModule    <- SMTP config, MailerModule.forRootAsync, HandlebarsAdapter
+      |
+EmailModule        <- EmailService: sendVerificationEmail(), sendWelcomeEmail()
+      |
+Event handlers     <- UserRegisteredHandler, UserEmailVerifiedHandler
+```
+
+Callers pass domain data (email, firstName, verificationUrl). They never touch SMTP settings or template names directly.
 
 ---
 
@@ -620,14 +331,43 @@ Copy `.env.example` to `.env` and fill in the values:
 cp .env.example .env
 ```
 
-Required variables (app will not start without these):
+| Variable               | Required | Description                          |
+| ---------------------- | -------- | ------------------------------------ |
+| `DATABASE_URL`         | Yes      | PostgreSQL connection string         |
+| `PORT`                 | No       | HTTP port (default: 3000)            |
+| `BASE_URL`             | Yes      | App base URL (used in email links)   |
+| `JWT_ACCESS_SECRET`    | Yes      | Secret for signing access tokens     |
+| `JWT_ACCESS_EXPIRY`    | No       | Access token lifetime (default: 15m) |
+| `JWT_REFRESH_SECRET`   | Yes      | Secret for signing refresh tokens    |
+| `JWT_REFRESH_EXPIRY`   | No       | Refresh token lifetime (default: 7d) |
+| `GOOGLE_CLIENT_ID`     | Yes      | Google OAuth app client ID           |
+| `GOOGLE_CLIENT_SECRET` | Yes      | Google OAuth app client secret       |
+| `GOOGLE_CALLBACK_URL`  | Yes      | OAuth redirect URL                   |
+| `SMTP_HOST`            | Yes      | Email server hostname                |
+| `SMTP_PORT`            | Yes      | Email server port                    |
+| `SMTP_USER`            | Yes      | SMTP username                        |
+| `SMTP_PASS`            | Yes      | SMTP password                        |
+| `SMTP_FROM`            | Yes      | Sender address (e.g. `no-reply@...`) |
 
-| Variable               | Description                       |
-| ---------------------- | --------------------------------- |
-| `DATABASE_URL`         | PostgreSQL connection string      |
-| `JWT_ACCESS_SECRET`    | Secret for signing access tokens  |
-| `JWT_REFRESH_SECRET`   | Secret for signing refresh tokens |
-| `GOOGLE_CLIENT_ID`     | Google OAuth app client ID        |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth app client secret    |
-| `GOOGLE_CALLBACK_URL`  | OAuth redirect URL                |
-| `SMTP_HOST`            | Email server hostname             |
+---
+
+## Running with Docker
+
+```bash
+# Start PostgreSQL + pgAdmin (no app container needed for dev)
+docker-compose up -d
+
+# Apply migrations
+npm run prisma:migrate
+
+# Start the app in watch mode
+npm run start:dev
+```
+
+pgAdmin is available at `http://localhost:5050`.
+
+---
+
+## Further Reading
+
+See `docs/PATTERNS.md` for a deeper explanation of CQRS, the repository pattern, domain events, and why the Aggregate doesn't save itself.
