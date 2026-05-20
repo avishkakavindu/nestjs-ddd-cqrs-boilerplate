@@ -1,13 +1,16 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AppConfigService } from './config/app-config.service';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { AppConfigModule } from './config/config.module';
 import { CommonModule } from './common/common.module';
 import { HealthModule } from './health/health.module';
 import { AppI18nModule } from './i18n/i18n.module';
 import { LoggerModule } from './logger/logger.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -26,9 +29,10 @@ import { AppService } from './app.service';
         { ttl: config.throttleTtl, limit: config.throttleLimit },
       ],
     }),
+    AuthModule,
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AppModule {}

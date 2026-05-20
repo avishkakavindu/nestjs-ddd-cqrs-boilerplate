@@ -34,5 +34,6 @@ const EventHandlers = [
     ...EventHandlers,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
   ],
+  exports: [USER_REPOSITORY],
 })
 export class UsersModule {}

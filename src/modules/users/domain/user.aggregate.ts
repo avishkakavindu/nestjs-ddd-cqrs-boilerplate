@@ -100,6 +100,36 @@ export class UserAggregate extends AggregateRoot {
     this.apply(new UserEmailVerifiedEvent(this.id, this.email));
   }
 
+  async validatePassword(password: string): Promise<void> {
+    if (!this.passwordHash) {
+      throw new UnauthorizedException(
+        'Account uses social login — no password set',
+      );
+    }
+    if (!this.isEmailVerified) {
+      throw new UnauthorizedException('Email is not verified');
+    }
+    const matches = await bcrypt.compare(password, this.passwordHash);
+    if (!matches) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+  }
+
+  async setRefreshToken(rawToken: string): Promise<UserAggregate> {
+    const hash = await bcrypt.hash(rawToken, 10);
+    return UserAggregate.reconstitute({
+      ...this.toProps(),
+      refreshTokenHash: hash,
+    });
+  }
+
+  clearRefreshToken(): UserAggregate {
+    return UserAggregate.reconstitute({
+      ...this.toProps(),
+      refreshTokenHash: null,
+    });
+  }
+
   async changePassword(
     currentPassword: string,
     newPassword: string,

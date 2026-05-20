@@ -11,6 +11,9 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
+import type { JwtPayload } from '../auth/jwt-payload.interface';
 import { PaginationOptionsDto } from '../../common/dto/pagination.dto';
 import { ChangePasswordCommand } from './commands/change-password.command';
 import { RegisterUserCommand } from './commands/register-user.command';
@@ -28,6 +31,7 @@ export class UsersController {
     private readonly queryBus: QueryBus,
   ) {}
 
+  @Public()
   @Post('')
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterUserDto) {
@@ -41,18 +45,21 @@ export class UsersController {
     );
   }
 
+  @Public()
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.commandBus.execute(new VerifyEmailCommand(dto.token));
   }
 
-  // TODO: replace :id param with @CurrentUser() decorator once JWT (step 19) is built
-  @Patch(':id/password')
+  @Patch('password')
   @HttpCode(HttpStatus.NO_CONTENT)
-  changePassword(@Param('id') id: string, @Body() dto: ChangePasswordDto) {
+  changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangePasswordDto,
+  ) {
     return this.commandBus.execute(
-      new ChangePasswordCommand(id, dto.currentPassword, dto.newPassword),
+      new ChangePasswordCommand(user.sub, dto.currentPassword, dto.newPassword),
     );
   }
 
